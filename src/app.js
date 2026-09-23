@@ -4,6 +4,11 @@ require("dotenv").config();
 
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
+const categoryRoutes = require("./routes/categoryRoutes");
+const doctorRoutes = require("./routes/doctorRoutes");
+const appointmentRoutes = require("./routes/appointmentRoutes");
+const availabilityRoutes = require("./routes/availabilityRoutes");
+const prescriptionRoutes = require("./routes/prescriptionRoutes");
 
 const app = express();
 
@@ -16,6 +21,12 @@ app.use(express.json());
 
 // Authentication routes
 app.use("/api/auth", authRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/doctors", doctorRoutes);
+app.use("/api/appointments", appointmentRoutes);
+app.use("/api/availability", availabilityRoutes);
+app.use("/api/prescriptions", prescriptionRoutes);
+
 
 // Health check
 app.get("/", (req, res) => {
