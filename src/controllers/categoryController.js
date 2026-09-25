@@ -1,23 +1,43 @@
 const Category = require("../models/Category");
 
-// ===============================
 // CREATE CATEGORY
-// ===============================
+
 const createCategory = async (req, res) => {
   try {
     const { name, image } = req.body;
 
-    if (!name) {
+    if (!name || !name.trim()) {
       return res.status(400).json({
         success: false,
         message: "Category name is required",
       });
     }
 
+    const categoryName = name.trim();
+
+    // Check whether category already exists
     const existingCategory = await Category.findOne({
-      name: name.trim(),
+      name: categoryName,
     });
 
+    // If category exists but is inactive, reactivate it
+    if (existingCategory && !existingCategory.isActive) {
+      existingCategory.isActive = true;
+
+      if (image !== undefined) {
+        existingCategory.image = image || "";
+      }
+
+      await existingCategory.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "Category reactivated successfully",
+        category: existingCategory,
+      });
+    }
+
+    // If active category already exists
     if (existingCategory) {
       return res.status(409).json({
         success: false,
@@ -25,9 +45,11 @@ const createCategory = async (req, res) => {
       });
     }
 
+    // Create completely new category
     const category = await Category.create({
-      name: name.trim(),
+      name: categoryName,
       image: image || "",
+      isActive: true,
     });
 
     return res.status(201).json({

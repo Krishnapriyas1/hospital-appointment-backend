@@ -9,6 +9,7 @@ const doctorRoutes = require("./routes/doctorRoutes");
 const appointmentRoutes = require("./routes/appointmentRoutes");
 const availabilityRoutes = require("./routes/availabilityRoutes");
 const prescriptionRoutes = require("./routes/prescriptionRoutes");
+const patientRoutes = require("./routes/patientRoutes");
 
 const app = express();
 
@@ -16,7 +17,13 @@ const app = express();
 connectDB();
 
 // Middlewares
-app.use(cors());
+// app.use(cors());
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // Authentication routes
@@ -26,6 +33,7 @@ app.use("/api/doctors", doctorRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/availability", availabilityRoutes);
 app.use("/api/prescriptions", prescriptionRoutes);
+app.use("/api/patients", patientRoutes);
 
 
 // Health check

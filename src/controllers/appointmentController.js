@@ -112,6 +112,7 @@ const createAppointment = async (req, res) => {
   }
 };
 
+
 // ===============================
 // PATIENT APPOINTMENT HISTORY
 // ===============================
@@ -275,10 +276,85 @@ const cancelAppointment = async (req, res) => {
   }
 };
 
+// ===============================
+// ADMIN - GET ALL APPOINTMENTS
+// ===============================
+
+const getAllAppointments = async (req, res) => {
+  try {
+    const {
+      status,
+      page = 1,
+      limit = 20,
+    } = req.query;
+
+    const filter = {};
+
+    if (status) {
+      filter.status = status;
+    }
+
+    const pageNumber = Math.max(parseInt(page), 1);
+
+    const limitNumber = Math.min(
+      Math.max(parseInt(limit), 1),
+      100
+    );
+
+    const skip = (pageNumber - 1) * limitNumber;
+
+    const [appointments, total] = await Promise.all([
+      Appointment.find(filter)
+        .populate(
+          "patient",
+          "name email phone"
+        )
+        .populate({
+          path: "doctor",
+          select:
+            "name specialization experience category",
+          populate: {
+            path: "category",
+            select: "name",
+          },
+        })
+        .sort({
+          date: -1,
+          time: -1,
+        })
+        .skip(skip)
+        .limit(limitNumber),
+
+      Appointment.countDocuments(filter),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      count: appointments.length,
+      total,
+      page: pageNumber,
+      limit: limitNumber,
+      totalPages: Math.ceil(total / limitNumber),
+      appointments,
+    });
+  } catch (error) {
+    console.error(
+      "Get all appointments error:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch appointments",
+    });
+  }
+};
+
 module.exports = {
   createAppointment,
   getMyAppointments,
   getDoctorAppointments,
   updateAppointmentStatus,
   cancelAppointment,
+  getAllAppointments,
 };

@@ -1,5 +1,7 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const nodemailer = require("nodemailer");
+const { sendOtpEmail } = require("../utils/mailer");
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -15,8 +17,21 @@ const generateToken = (user) => {
 };
 
 // ===============================
+// EMAIL TRANSPORTER
+// ===============================
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_APP_PASSWORD,
+  },
+});
+
+// ===============================
 // PATIENT - REQUEST OTP
-// =========================
+// ===============================
+
 const requestPatientOtp = async (req, res) => {
   try {
     const { email } = req.body;
@@ -28,40 +43,48 @@ const requestPatientOtp = async (req, res) => {
       });
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     let user = await User.findOne({
-      email: email.toLowerCase(),
+      email: normalizedEmail,
       role: "patient",
     }).select("+otp +otpExpiresAt");
 
     if (!user) {
       user = await User.create({
         name: "Patient",
-        email: email.toLowerCase(),
+        email: normalizedEmail,
         role: "patient",
       });
 
-      user = await User.findById(user._id).select("+otp +otpExpiresAt");
+      user = await User.findById(user._id).select(
+        "+otp +otpExpiresAt"
+      );
     }
 
-    // Simulated OTP for technical test
-    const otp = "123456";
+    const otp = Math.floor(
+      100000 + Math.random() * 900000
+    ).toString();
 
     user.otp = otp;
-    user.otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    user.otpExpiresAt = new Date(
+      Date.now() + 5 * 60 * 1000
+    );
 
     await user.save();
 
+    await sendOtpEmail(normalizedEmail, otp);
+
     return res.status(200).json({
       success: true,
-      message: "OTP generated successfully",
-      demoOtp: otp,
+      message: "OTP sent successfully",
     });
   } catch (error) {
     console.error("Request OTP error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Failed to generate OTP",
+      message: "Failed to send OTP",
     });
   }
 };
@@ -91,6 +114,14 @@ const verifyPatientOtp = async (req, res) => {
         message: "Patient not found",
       });
     }
+
+    // Debug
+    console.log("VERIFY OTP DEBUG");
+    console.log("Email:", email);
+    console.log("Entered OTP:", otp);
+    console.log("Stored OTP:", user.otp);
+    console.log("OTP Expiry:", user.otpExpiresAt);
+    console.log("Current Time:", new Date());
 
     if (
       !user.otp ||

@@ -6,6 +6,7 @@ const {
   getDoctorAppointments,
   updateAppointmentStatus,
   cancelAppointment,
+  getAllAppointments, // ✅ ADD THIS
 } = require("../controllers/appointmentController");
 
 const protect = require("../middleware/authMiddleware");
@@ -13,7 +14,21 @@ const authorize = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
-// Patient
+// ===============================
+// ADMIN
+// ===============================
+
+router.get(
+  "/admin/all",
+  protect,
+  authorize("admin"),
+  getAllAppointments
+);
+
+// ===============================
+// PATIENT
+// ===============================
+
 router.post(
   "/",
   protect,
@@ -35,7 +50,10 @@ router.patch(
   cancelAppointment
 );
 
-// Doctor
+// ===============================
+// DOCTOR
+// ===============================
+
 router.get(
   "/doctor/my",
   protect,
