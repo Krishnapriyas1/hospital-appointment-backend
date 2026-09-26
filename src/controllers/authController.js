@@ -1,6 +1,5 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
-const nodemailer = require("nodemailer");
 const { sendOtpEmail } = require("../utils/mailer");
 
 const generateToken = (user) => {
@@ -16,17 +15,17 @@ const generateToken = (user) => {
   );
 };
 
-// ===============================
-// EMAIL TRANSPORTER
-// ===============================
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_APP_PASSWORD,
-  },
-});
+// // EMAIL TRANSPORTER
+
+
+// const transporter = nodemailer.createTransport({
+//   service: "gmail",
+//   auth: {
+//     user: process.env.EMAIL_USER,
+//     pass: process.env.EMAIL_APP_PASSWORD,
+//   },
+// });
 
 // ===============================
 // PATIENT - REQUEST OTP
@@ -34,6 +33,8 @@ const transporter = nodemailer.createTransport({
 
 const requestPatientOtp = async (req, res) => {
   try {
+    console.log("1. OTP request received");
+
     const { email } = req.body;
 
     if (!email) {
@@ -45,12 +46,18 @@ const requestPatientOtp = async (req, res) => {
 
     const normalizedEmail = email.trim().toLowerCase();
 
+    console.log("2. Finding patient:", normalizedEmail);
+
     let user = await User.findOne({
       email: normalizedEmail,
       role: "patient",
     }).select("+otp +otpExpiresAt");
 
+    console.log("3. User query completed");
+
     if (!user) {
+      console.log("4. Patient not found. Creating patient...");
+
       user = await User.create({
         name: "Patient",
         email: normalizedEmail,
@@ -60,6 +67,8 @@ const requestPatientOtp = async (req, res) => {
       user = await User.findById(user._id).select(
         "+otp +otpExpiresAt"
       );
+
+      console.log("5. Patient created");
     }
 
     const otp = Math.floor(
@@ -73,7 +82,13 @@ const requestPatientOtp = async (req, res) => {
 
     await user.save();
 
+    console.log("6. OTP saved to MongoDB");
+
+    console.log("7. Sending OTP through Brevo...");
+
     await sendOtpEmail(normalizedEmail, otp);
+
+    console.log("8. Brevo email completed");
 
     return res.status(200).json({
       success: true,
